@@ -1,0 +1,73 @@
+{% extends "layout.html" %}
+{% load static %}
+
+{% block title %}
+{% endblock %}
+
+{% block content %}
+<div class="watchparty-container">
+  <h1>{{ party.name }}</h1>
+  
+  <!-- Invite Section -->
+  <div class="invite-section">
+    <h3>Invite Friends:</h3>
+    <div class="invite-link-box">
+      <input type="text" id="inviteLink" 
+             value="{{ request.scheme }}://{{ request.get_host }}{% url 'users:join_party' party.id %}" 
+             readonly>
+      <button onclick="copyInviteLink()">Copy Link</button>
+    </div>
+    <p>Share this link with friends to join your watch party</p>
+  </div>
+
+  <!-- Live Member List -->
+  <div class="member-list" hx-get="{% url 'users:party_members' party.id %}" hx-trigger="every 5s">
+    <h3>Current Members ({{ party.members.count }}):</h3>
+    <ul>
+      {% for member in party.members.all %}
+        <li>
+          {% if member.profile.avatar %}
+            <img src="{{ member.profile.avatar.url }}" class="member-avatar" alt="{{ member.username }}" width="30">
+          {% endif %}
+          {{ member.username }}{% if member == party.host %} (Host){% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+  </div>
+
+  <!-- Host-only Start Button -->
+  {% if request.user == party.host %}
+    <form method="post" action="{% url 'users:watch_party_choose' party.id %}">
+      {% csrf_token %}
+      <input type="hidden" name="initiate_search" value="true">
+      <button type="submit" class="find-movie-btn">
+        Find Movie Based on Group Preferences
+      </button>
+    </form>
+  {% else %}
+    <p class="waiting-msg">
+      <i class="fas fa-spinner fa-spin"></i> Waiting for host to start the movie search...
+    </p>
+  {% endif %}
+</div>
+
+<!-- Separate HTMX Polling (for live update check) -->
+{% if not request.user == party.host and not party.search_initiated %}
+  <div 
+    hx-get="{% url 'users:check_search_status' party.id %}" 
+    hx-trigger="every 2s"
+    hx-swap="none">
+  </div>
+{% endif %}
+
+<script>
+  function copyInviteLink() {
+    const link = document.getElementById("inviteLink");
+    link.select();
+    document.execCommand("copy");
+    alert("Invite link copied to clipboard!");
+  }
+</script>
+
+
+{% endblock %}

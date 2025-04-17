@@ -1,0 +1,62 @@
+{% extends 'layout.html' %}
+
+{% block title %}
+{% endblock %}
+
+{% block content %}
+    <h2>Search Users</h2>
+    
+    <div class="search-container">
+        <form action="{% url 'users:search_users' %}" method="GET">
+            <input type="text" name="q" placeholder="Search by username..." value="{{ query }}">
+            <button type="submit">Search</button>
+        </form>
+    </div>
+    
+    {% if messages %}
+        <div class="messages">
+            {% for message in messages %}
+                <p class="message {{ message.tags }}">{{ message }}</p>
+            {% endfor %}
+        </div>
+    {% endif %}
+    
+    <div class="user-results">
+        {% if query %}
+            {% if user_data %}
+                <h3>Search Results for "{{ query }}"</h3>
+                <div class="user-list">
+                    {% for data in user_data %}
+                        <div class="user-card">
+                            <img src="{{ data.user.profile.avatar.url }}" alt="{{ data.user.username }}'s avatar" class="user-avatar-small">
+                            <div class="user-info">
+                                <div class="user-name">{{ data.user.username }}</div>
+                                <div class="user-actions">
+                                    <a href="{% url 'users:view_profile' data.user.username %}" class="view-profile-link">View Profile</a>
+                                    
+                                    {% if data.friendship_status == 'pending' %}
+                                        {% if data.user == request.user %}
+                                            <span class="pending-status">Friend request pending</span>
+                                        {% else %}
+                                            <span class="pending-status">Friend request sent</span>
+                                        {% endif %}
+                                    {% elif data.friendship_status == 'accepted' %}
+                                        <span class="friend-status">Friends</span>
+                                    {% elif data.friendship_status == 'rejected' %}
+                                        <span class="rejected-status">Request declined</span>
+                                    {% else %}
+                                        <a href="{% url 'users:send_friend_request' data.user.id %}" class="friend-request-btn">Add Friend</a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p>No users found matching "{{ query }}"</p>
+            {% endif %}
+        {% else %}
+            <p>Enter a username to search for users</p>
+        {% endif %}
+    </div>
+{% endblock %}

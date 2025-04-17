@@ -1,0 +1,259 @@
+{% extends 'layout.html' %}
+
+{% block title %}
+{% endblock %}
+
+{% block content %}
+    <div class="media-body">
+        <img class="account-img" src="{{ profile_user.profile.avatar.url }}" alt="{{ profile_user.username }}'s avatar"/>
+        <h2 class="account-heading">{{ profile_user.username }}</h2>
+        
+        {% if is_self %}
+            <a href="{% url 'users:change_avatar' %}">Change Avatar</a>
+        {% else %}
+            <div class="friend-status-container">
+                {% if friendship_status == 'accepted' %}
+                    <span class="friend-status">You are friends</span>
+                    <a href="{% url 'users:remove_friend' friendship_id %}" class="remove-friend-btn">Remove Friend</a>
+                {% elif friendship_status == 'pending' %}
+                    {% if profile_user == request.user %}
+                        <span class="pending-status">This user sent you a friend request</span>
+                        <div class="friend-request-actions">
+                            <a href="{% url 'users:accept_friend_request' friendship_id %}" class="accept-btn">Accept</a>
+                            <a href="{% url 'users:reject_friend_request' friendship_id %}" class="reject-btn">Decline</a>
+                        </div>
+                    {% else %}
+                        <span class="pending-status">Friend request sent</span>
+                    {% endif %}
+                {% elif friendship_status == 'rejected' %}
+                    <span class="rejected-status">Friend request was declined</span>
+                {% else %}
+                    <a href="{% url 'users:send_friend_request' profile_user.id %}" class="friend-request-btn">Add Friend</a>
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+
+    <div class="movie-lists">
+        {% if is_friend or is_self %}
+            <div class="movie-list">
+                <h3>Movies {{ profile_user.username }} Likes</h3>
+                {% if liked_movies %}
+                    <div class="profile-movie-grid">
+                        {% for movie in liked_movies %}
+                            <div class="profile-movie-card" data-imdb-id="{{ movie.imdb_id }}">
+                                <img src="{{ movie.poster }}" alt="{{ movie.title }} Poster" onerror="this.src='/api/placeholder/200/300'">
+                                <div class="profile-movie-info">
+                                    <div class="profile-movie-title">{{ movie.title }}</div>
+                                    <div class="profile-movie-year">{{ movie.year }}</div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="no-movies">{{ profile_user.username }} hasn't liked any movies yet.</p>
+                {% endif %}
+            </div>
+
+            <div class="movie-list">
+                <h3>Movies {{ profile_user.username }} Dislikes</h3>
+                {% if disliked_movies %}
+                    <div class="profile-movie-grid">
+                        {% for movie in disliked_movies %}
+                            <div class="profile-movie-card" data-imdb-id="{{ movie.imdb_id }}">
+                                <img src="{{ movie.poster }}" alt="{{ movie.title }} Poster" onerror="this.src='/api/placeholder/200/300'">
+                                <div class="profile-movie-info">
+                                    <div class="profile-movie-title">{{ movie.title }}</div>
+                                    <div class="profile-movie-year">{{ movie.year }}</div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="no-movies">{{ profile_user.username }} hasn't disliked any movies yet.</p>
+                {% endif %}
+            </div>
+        {% else %}
+            <div class="private-profile">
+                <p>You need to be friends with {{ profile_user.username }} to see their movie preferences.</p>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Movie Details Modal -->
+    <div id="movieModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <div id="movieDetails"></div>
+        </div>
+    </div>
+
+    <script>
+        const apiKey = '1e9287fc';
+        const tmdbKey = '9069e9679489f7393d82ea5f5af0e201';
+        const modal = document.getElementById('movieModal');
+        const movieDetails = document.getElementById('movieDetails');
+        const closeButton = document.getElementsByClassName('close-button')[0];
+
+        async function fetchMovieDetails(imdbID) {
+            const url = `https://www.omdbapi.com/?apikey=${apiKey}&i=${imdbID}&plot=full`;
+            const response = await fetch(url);
+            return response.json();
+        }
+
+        async function fetchTMDBDetails(imdbID) {
+            const url = `https://api.themoviedb.org/3/find/${imdbID}?api_key=${tmdbKey}&external_source=imdb_id`;
+            const response = await fetch(url);
+            return response.json();
+        }
+
+        async function fetchProviders(tmdbID) {
+            try {
+                const url = `https://api.themoviedb.org/3/movie/${tmdbID}/watch/providers?api_key=${tmdbKey}&region=US`;
+                const response = await fetch(url);
+                return response.json();
+            } catch (error) {
+                console.error('Error fetching providers:', error);
+                return null;
+            }
+        }
+
+        function createProvidersHTML(providers) {
+            if (!providers || !providers.results || !providers.results.US) {
+                return '<div class="providers-info">No streaming information available</div>';
+            }
+            
+            const usProviders = providers.results.US;
+            let providersHTML = '<div class="providers-info">';
+            
+            if (usProviders.flatrate && usProviders.flatrate.length > 0) {
+                providersHTML += '<div class="provider-section"><strong>Stream on:</strong> ';
+                providersHTML += usProviders.flatrate.map(provider => 
+                    `<span class="provider-name">${provider.provider_name}</span>`
+                ).join(' ');
+                providersHTML += '</div>';
+            }
+            
+            if (usProviders.rent && usProviders.rent.length > 0) {
+                providersHTML += '<div class="provider-section"><strong>Rent on:</strong> ';
+                providersHTML += usProviders.rent.map(provider => 
+                    `<span class="provider-name">${provider.provider_name}</span>`
+                ).join(' ');
+                providersHTML += '</div>';
+            }
+            
+            if (usProviders.buy && usProviders.buy.length > 0) {
+                providersHTML += '<div class="provider-section"><strong>Buy on:</strong> ';
+                providersHTML += usProviders.buy.map(provider => 
+                    `<span class="provider-name">${provider.provider_name}</span>`
+                ).join(' ');
+                providersHTML += '</div>';
+            }
+            
+            if (!usProviders.flatrate && !usProviders.rent && !usProviders.buy) {
+                providersHTML += '<div>No streaming information available</div>';
+            }
+            
+            providersHTML += '</div>';
+            return providersHTML;
+        }
+
+        async function showMovieDetails(imdbID, title, year, poster) {
+            try {
+                // Show loading state
+                movieDetails.innerHTML = `
+                    <div class="modal-header">
+                        <h2>${title} (${year})</h2>
+                    </div>
+                    <div class="modal-body">
+                        <div class="modal-poster">
+                            <img src="${poster !== '/api/placeholder/200/300' ? poster : '/api/placeholder/250/375'}" alt="${title} Poster">
+                        </div>
+                        <div class="modal-info">
+                            <p><strong>Loading movie details...</strong></p>
+                        </div>
+                    </div>
+                `;
+                
+                modal.style.display = 'block';
+                
+                // Fetch full details
+                const movieData = await fetchMovieDetails(imdbID);
+                
+                // Render the full details
+                movieDetails.innerHTML = `
+                    <div class="modal-header">
+                        <h2>${movieData.Title} (${movieData.Year})</h2>
+                    </div>
+                    <div class="modal-body">
+                        <div class="modal-poster">
+                            <img src="${movieData.Poster !== 'N/A' ? movieData.Poster : '/api/placeholder/250/375'}" alt="${movieData.Title} Poster">
+                        </div>
+                        <div class="modal-info">
+                            <p><strong>Runtime:</strong> ${movieData.Runtime}</p>
+                            <p><strong>Rated:</strong> ${movieData.Rated}</p>
+                            <p><strong>Genre:</strong> ${movieData.Genre}</p>
+                            <p><strong>Director:</strong> ${movieData.Director}</p>
+                            <p><strong>Cast:</strong> ${movieData.Actors}</p>
+                            <p><strong>Plot:</strong> ${movieData.Plot}</p>
+                            <p><strong>Awards:</strong> ${movieData.Awards}</p>
+                            <p><strong>IMDb Rating:</strong> ${movieData.imdbRating}/10 (${movieData.imdbVotes} votes)</p>
+                            ${movieData.BoxOffice ? `<p><strong>Box Office:</strong> ${movieData.BoxOffice}</p>` : ''}
+                            <div id="modal-providers" class="providers-container">
+                                ${createProvidersHTML(await fetchProviders((await fetchTMDBDetails(imdbID)).movie_results[0].id))}
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+            } catch (error) {
+                console.error('Error showing movie details:', error);
+                movieDetails.innerHTML = `
+                    <div class="modal-header">
+                        <h2>${title} (${year})</h2>
+                    </div>
+                    <div class="modal-body">
+                        <p>Error loading movie details. Please try again.</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Close modal handlers
+        closeButton.addEventListener('click', () => {
+            modal.style.display = 'none';
+        });
+
+        window.addEventListener('click', (event) => {
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+        });
+
+        // Add click handlers to all movie cards
+        document.addEventListener('DOMContentLoaded', function() {
+            const movieCards = document.querySelectorAll('.profile-movie-card');
+            
+            movieCards.forEach(card => {
+                card.addEventListener('click', function() {
+                    const imdbID = this.dataset.imdbId;
+                    const title = this.querySelector('.profile-movie-title').textContent;
+                    const year = this.querySelector('.profile-movie-year').textContent;
+                    const poster = this.querySelector('img').src;
+                    
+                    showMovieDetails(imdbID, title, year, poster);
+                });
+                
+                // Add hover effects
+                card.style.cursor = 'pointer';
+                card.style.transition = 'transform 0.2s';
+                card.addEventListener('mouseenter', () => {
+                    card.style.transform = 'scale(1.03)';
+                });
+                card.addEventListener('mouseleave', () => {
+                    card.style.transform = 'scale(1)';
+                });
+            });
+        });
+    </script>
+{% endblock %}

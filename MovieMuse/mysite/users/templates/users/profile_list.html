@@ -1,0 +1,15 @@
+{% extends 'layout.html' %}
+
+{% block title %}
+{% endblock %}
+
+{% block content %}
+      {% if profiles %}
+        {% for profile in profiles %}
+          <div class="profile-box">
+            <img class="list-img" src="{{ profile.avatar.url }}"/>
+            <a href="/users/profile_viewer/{{ profile.user.username }}">Username: {{ profile.user.username }}</a>
+          </div>
+        {% endfor %}
+      {% endif %}
+{% endblock %}

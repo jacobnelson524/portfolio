@@ -1,0 +1,22 @@
+{% extends 'layout.html' %}
+
+{% block title %}
+{% endblock %}
+
+{% block content %}
+    <h2>Login</h2>
+    <form method="POST" action="">
+      {% csrf_token %}
+      <div class="username-input">
+        <input type="text" name="username" placeholder="Username..." class="form-control">
+      </div>
+      <div class="password-input">
+          <input type="password" name="password" placeholder="Password..." class="form-control" >
+      </div>
+      <button id="login-button" type="submit"> Submit </button>
+      <p class="message">Don't have an account? <a href="{% url 'users:register' %}">Register</a></p>
+    </form>
+    {% for message in messages %}
+    <p class= "text-center">{{message}}</p>
+  {% endfor %}
+{% endblock %}

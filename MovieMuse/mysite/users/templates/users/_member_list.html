@@ -1,0 +1,13 @@
+<!-- templates/users/_member_list.html -->
+<ul id="member-list">
+  <h3>Current Members ({{ party.members.count }}):</h3>
+  {% for member in party.members.all %}
+    <li>
+      {% if member.profile.avatar %}
+        <img src="{{ member.profile.avatar.url }}" class="member-avatar" alt="{{ member.username }}" width="30">
+      {% endif %}
+      {{ member.username }}
+      {% if member == party.host %}(Host){% endif %}
+    </li>
+  {% endfor %}
+</ul>

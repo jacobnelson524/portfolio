@@ -1,0 +1,37 @@
+{% extends 'layout.html' %}
+
+{% block title %}
+{% endblock %}
+
+{% block content %}
+    <h2>Your Friends</h2>
+    
+    {% if messages %}
+        <div class="messages">
+            {% for message in messages %}
+                <p class="message {{ message.tags }}">{{ message }}</p>
+            {% endfor %}
+        </div>
+    {% endif %}
+    
+    <div class="friend-list-container">
+        {% if friends %}
+            <div class="friend-grid">
+                {% for friend in friends %}
+                    <div class="friend-card">
+                        <img src="{{ friend.user.profile.avatar.url }}" alt="{{ friend.user.username }}'s avatar" class="friend-avatar">
+                        <div class="friend-info">
+                            <div class="friend-name">{{ friend.user.username }}</div>
+                            <div class="friend-actions">
+                                <a href="{% url 'users:view_profile' friend.user.username %}" class="view-profile-link">View Profile</a>
+                                <a href="{% url 'users:remove_friend' friend.friendship_id %}" class="remove-friend-btn">Remove Friend</a>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p class="no-friends">You don't have any friends yet. <a href="{% url 'users:search_users' %}">Search for users</a> to add friends!</p>
+        {% endif %}
+    </div>
+{% endblock %}
