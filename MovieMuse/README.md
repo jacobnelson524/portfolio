@@ -8,6 +8,12 @@ How to run (on Windows): Launch command prompt, then execute the following two c
 cd (MovieMuse folder path)/mysite
 
 
+py manage.py makemigrations
+
+
+py manage.py migrate
+
+
 py manage.py runserver
 
 

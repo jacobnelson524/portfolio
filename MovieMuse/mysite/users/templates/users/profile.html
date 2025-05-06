@@ -276,9 +276,30 @@
                 if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
                 
                 const data = await response.json();
+
+                // Toggle button active state based on server response
+                const movieCard = document.querySelector(`[data-imdb-id="${movieData.imdbID}"]`);
+                const likeBtn = document.querySelector('.modal-like-btn');
+                const dislikeBtn = document.querySelector('.modal-dislike-btn');
+
+                if (data.action === 'removed') {
+                    if (reactionType === 'like') {
+                        likeBtn.classList.remove('active');
+                    } else {
+                        dislikeBtn.classList.remove('active');
+                    }
+                } else if (data.action === 'updated') {
+                    if (reactionType === 'like') {
+                        if (likeBtn) likeBtn.classList.add('active');
+                        if (dislikeBtn) dislikeBtn.classList.remove('active');
+                    } else {
+                        if (dislikeBtn) dislikeBtn.classList.add('active');
+                        if (likeBtn) likeBtn.classList.remove('active');
+                    }
+                }
                 
                 // Update UI based on response
-                if (data.action === 'added' || data.action === 'updated') {
+                if (data.action === 'removed' || data.action === 'updated') {
                     // Refresh the page to show updated reactions
                     window.location.reload();
                 }
